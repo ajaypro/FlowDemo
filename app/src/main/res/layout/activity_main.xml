@@ -9,13 +9,44 @@
 
 
     <Button
-        android:id="@+id/button"
+        android:id="@+id/lamda_btn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:layout_constraintBottom_toBottomOf="parent"
-        android:text="Launch Kotlin Flow"
+        android:layout_marginTop="244dp"
+        android:text="Launch lambda flow"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/collectionflow_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Launch collection flow"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/lamda_btn"
+        app:layout_constraintVertical_bias="0.262" />
+
+    <Button
+        android:id="@+id/channelflow_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Launch channel flow"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/collectionflow_btn"
+        app:layout_constraintVertical_bias="0.262" />
+
+    <Button
+        android:id="@+id/flowOf_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Launch flowof"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/channelflow_btn"
+        app:layout_constraintVertical_bias="0.262" />
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>
