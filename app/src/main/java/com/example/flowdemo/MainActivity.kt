@@ -73,6 +73,9 @@ import kotlinx.coroutines.launch
 class MainActivity : AppCompatActivity() {
 
     lateinit var flow: Flow<Int>
+    lateinit var fixedFlow: Flow<Int>
+    lateinit var collectionFlow: Flow<Int>
+    lateinit var channelFlow: Flow<Int>
 
     lateinit var binding: ActivityMainBinding
 
@@ -84,8 +87,16 @@ class MainActivity : AppCompatActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
         setupLambdaFlow()
+        setUpChannelFlowWithLambda()
+        setupCollectionFlow()
+        setupFlowOf()
+
         collectLambdaFlow()
+        collectFlowOf()
+        collectCollectionFlow()
+        collectChannelFlow()
 
     }
 
@@ -97,15 +108,50 @@ class MainActivity : AppCompatActivity() {
             Log.d(TAG, "Start flow")
             (0..10).forEach {
                 // Emit items with 500 milliseconds delay
-                delay(1000)
                 Log.d(TAG, "Emitting $it")
                 emit(it)
             }
         }
     }
 
-     fun collectLambdaFlow() {
-        binding.button.setOnClickListener {
+    /**
+     * flowOf builder
+     */
+    fun setupFlowOf(){
+        fixedFlow = flowOf( 1,2,3,4).onEach {
+            Log.d(TAG, "EmittingFixedFlow $it")
+            delay(300) }
+
+    }
+
+    /**
+     * convert to flow from collection asFlow() builder
+     */
+    fun setupCollectionFlow() {
+        val list = listOf(1,2,3,5,6,7)
+        collectionFlow = list.asFlow().onEach {
+            Log.d(TAG, "EmittingCollectionFlow $it")
+            delay(300) }
+
+
+
+    }
+
+    /**
+     * Channel flow builder
+     */
+    fun setUpChannelFlowWithLambda() {
+        channelFlow = channelFlow {
+            (0..5).forEach {
+                // Emit items with 500 milliseconds delay
+                Log.d(TAG, "EmittingChannelFlow $it")
+                send(it)
+            }
+        }
+    }
+
+    fun collectLambdaFlow() {
+        binding.lamdaBtn.setOnClickListener {
             CoroutineScope(Dispatchers.Main).launch {
 
                 flow.collect {
@@ -115,5 +161,40 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
+    fun collectFlowOf() {
+        binding.flowOfBtn.setOnClickListener {
+            CoroutineScope(Dispatchers.Main).launch {
+                fixedFlow.collect {
+                    Log.d(TAG, it.toString())
+                    delay(2000)
+                }
+            }
+        }
+    }
+
+    fun collectChannelFlow() {
+        binding.channelflowBtn.setOnClickListener {
+            CoroutineScope(Dispatchers.Main).launch {
+                channelFlow.collect {
+                    Log.d(TAG, it.toString())
+                    delay(2000)
+                }
+            }
+        }
+    }
+
+    fun collectCollectionFlow() {
+        binding.collectionflowBtn.setOnClickListener {
+            CoroutineScope(Dispatchers.Main).launch {
+                collectionFlow.collect {
+                    Log.d(TAG, it.toString())
+                    delay(2000)
+                }
+            }
+        }
+    }
+
+
 
 }
