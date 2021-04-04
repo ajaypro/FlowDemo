@@ -98,7 +98,36 @@ class MainActivity : AppCompatActivity() {
         collectCollectionFlow()
         collectChannelFlow()
 
+        binding.flowChainBtn.setOnClickListener {
+            CoroutineScope(Dispatchers.Main).launch {
+                flowChain()
+            }
+        }
+
     }
+
+    /**
+     * flowchain to be in a  coroutine because collect() is a suspend function
+     * Incase to make api calls inside flow{} we need to ensure we make them run in separate thread, since its in coroutine context
+     * we have to use dispatchers and here it would be to use .flowOn(Dispatchers.IO)
+     * By Default the coroutine context of producer is same for .collect() as well which preserves the context
+     */
+    suspend fun flowChain(){
+
+        flow {
+            Log.d(TAG, "from producer ${Thread.currentThread().name}")
+            (0..10).forEach {
+                // Emit items with 500 milliseconds delay
+                Log.d(TAG, "Emitting  $it")
+                emit(it)
+            }
+        }.flowOn(Dispatchers.IO) // the code above the producer runs in a worker thread and
+            .collect {
+                Log.d(TAG, "collect flow chain ${Thread.currentThread().name}") // this will run in dispatchers.main called where initially this is been called.
+            Log.d(TAG, "from chain $it")
+        }
+    }
+
 
     /**
      * Lambda flow builder
