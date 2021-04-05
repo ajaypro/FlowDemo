@@ -2,13 +2,15 @@ package com.example.flowdemo
 
 import android.os.Bundle
 import android.util.Log
+import android.view.View
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
 import com.example.flowdemo.databinding.ActivityMainBinding
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
 
 /**
  * Sceanrio 1: producer delay(1000L), consumer delay(2000L) when flow.collect{} starts executing it will run in same coroutine context that of collector is
@@ -48,7 +50,7 @@ import kotlinx.coroutines.launch
 2021-04-04 12:38:04.852 3834-3834/com.example.flowdemo D/MainActivity: Emitting 9
 2021-04-04 12:38:05.844 3834-3834/com.example.flowdemo D/MainActivity: 5
 
- Scenario 3: producer delay(1000L) has .flowOn(Dispatchers.Default), consumer delay(2000L)  starts executing it will run in different coroutine context that of collector is
+Scenario 3: producer delay(1000L) has .flowOn(Dispatchers.Default), consumer delay(2000L)  starts executing it will run in different coroutine context that of collector is
  *  defined and produces following output, where producer will cause 1 sec delay but collector starts collecting only after 2 sec delay
  *  Output:
  *
@@ -70,6 +72,7 @@ import kotlinx.coroutines.launch
 2021-04-04 12:41:55.499 4014-4014/com.example.flowdemo D/MainActivity: 5
  */
 
+@ExperimentalCoroutinesApi
 class MainActivity : AppCompatActivity() {
 
     lateinit var flow: Flow<Int>
@@ -78,6 +81,8 @@ class MainActivity : AppCompatActivity() {
     lateinit var channelFlow: Flow<Int>
 
     lateinit var binding: ActivityMainBinding
+
+    private val viewModel: MainViewModel by viewModels()
 
     val TAG = "MainActivity"
 
@@ -88,19 +93,69 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        setupLambdaFlow()
-        setUpChannelFlowWithLambda()
-        setupCollectionFlow()
-        setupFlowOf()
+        /**
+         * Making login visibility login to show flow builders
+         * For stateflow I have created login feature using vewimodel to use the `binding.textInputLayout.visibility == View.GONE` in else clause
+         * to check stateflow with login
+         */
+        if (binding.textInputLayout.visibility == View.GONE) {
+            setupLambdaFlow()
+            setUpChannelFlowWithLambda()
+            setupCollectionFlow()
+            setupFlowOf()
 
-        collectLambdaFlow()
-        collectFlowOf()
-        collectCollectionFlow()
-        collectChannelFlow()
+            collectLambdaFlow()
+            collectFlowOf()
+            collectCollectionFlow()
+            collectChannelFlow()
 
-        binding.flowChainBtn.setOnClickListener {
-            CoroutineScope(Dispatchers.Main).launch {
-                flowChain()
+            binding.flowChainBtn.setOnClickListener {
+                CoroutineScope(Dispatchers.Main).launch {
+                    flowChain()
+                }
+            }
+        } else {
+
+            binding.textInputLayout.isVisible = true
+            binding.textInputLayout2.isVisible = true
+            binding.btnLogin.isVisible = true
+            login()
+        }
+    }
+
+    fun login() {
+
+        binding.btnLogin.setOnClickListener {
+            viewModel.login(
+                binding.etUsername.text.toString(),
+                binding.etPassword.text.toString()
+            )
+        }
+
+        lifecycleScope.launchWhenStarted {
+            viewModel.loginUiState.collect {
+                when (it) {
+                    is MainViewModel.LoginUiState.Success -> {
+                        Snackbar.make(
+                            binding.root,
+                            "Successfully logged in",
+                            Snackbar.LENGTH_LONG
+                        ).show()
+                        binding.progressBar.isVisible = false
+                    }
+                    is MainViewModel.LoginUiState.Error -> {
+                        Snackbar.make(
+                            binding.root,
+                            it.message,
+                            Snackbar.LENGTH_LONG
+                        ).show()
+                        binding.progressBar.isVisible = false
+                    }
+                    is MainViewModel.LoginUiState.Loading -> {
+                        binding.progressBar.isVisible = true
+                    }
+                    else -> Unit
+                }
             }
         }
 
@@ -112,7 +167,7 @@ class MainActivity : AppCompatActivity() {
      * we have to use dispatchers and here it would be to use .flowOn(Dispatchers.IO)
      * By Default the coroutine context of producer is same for .collect() as well which preserves the context
      */
-    suspend fun flowChain(){
+    suspend fun flowChain() {
 
         flow {
             Log.d(TAG, "from producer ${Thread.currentThread().name}")
@@ -123,16 +178,19 @@ class MainActivity : AppCompatActivity() {
             }
         }.flowOn(Dispatchers.IO) // the code above the producer runs in a worker thread and
             .collect {
-                Log.d(TAG, "collect flow chain ${Thread.currentThread().name}") // this will run in dispatchers.main called where initially this is been called.
-            Log.d(TAG, "from chain $it")
-        }
+                Log.d(
+                    TAG,
+                    "collect flow chain ${Thread.currentThread().name}"
+                ) // this will run in dispatchers.main called where initially this is been called.
+                Log.d(TAG, "from chain $it")
+            }
     }
 
 
     /**
      * Lambda flow builder
      */
-    fun setupLambdaFlow(){
+    fun setupLambdaFlow() {
         flow = flow {
             Log.d(TAG, "Start flow")
             (0..10).forEach {
@@ -146,10 +204,11 @@ class MainActivity : AppCompatActivity() {
     /**
      * flowOf builder
      */
-    fun setupFlowOf(){
-        fixedFlow = flowOf( 1,2,3,4).onEach {
+    fun setupFlowOf() {
+        fixedFlow = flowOf(1, 2, 3, 4).onEach {
             Log.d(TAG, "EmittingFixedFlow $it")
-            delay(300) }
+            delay(300)
+        }
 
     }
 
@@ -157,11 +216,11 @@ class MainActivity : AppCompatActivity() {
      * convert to flow from collection asFlow() builder
      */
     fun setupCollectionFlow() {
-        val list = listOf(1,2,3,5,6,7)
+        val list = listOf(1, 2, 3, 5, 6, 7)
         collectionFlow = list.asFlow().onEach {
             Log.d(TAG, "EmittingCollectionFlow $it")
-            delay(300) }
-
+            delay(300)
+        }
 
 
     }
@@ -180,6 +239,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun collectLambdaFlow() {
+        binding.lamdaBtn.isVisible = true
         binding.lamdaBtn.setOnClickListener {
             CoroutineScope(Dispatchers.Main).launch {
 
@@ -192,6 +252,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun collectFlowOf() {
+        binding.flowOfBtn.isVisible = true
         binding.flowOfBtn.setOnClickListener {
             CoroutineScope(Dispatchers.Main).launch {
                 fixedFlow.collect {
@@ -203,6 +264,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun collectChannelFlow() {
+        binding.channelflowBtn.isVisible = true
         binding.channelflowBtn.setOnClickListener {
             CoroutineScope(Dispatchers.Main).launch {
                 channelFlow.collect {
@@ -214,6 +276,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun collectCollectionFlow() {
+        binding.collectionflowBtn.isVisible = true
         binding.collectionflowBtn.setOnClickListener {
             CoroutineScope(Dispatchers.Main).launch {
                 collectionFlow.collect {
@@ -223,7 +286,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
 
 
 }
